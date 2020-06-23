@@ -1,9 +1,9 @@
-'''
-This function take a yaml file and a dict input, and outputs a beam. The dictionary is formatted such that each parameter has a ":" where
-two brackets would be located. For example, "gen.input[t_dist][max_t][units] = value" would be formatted as 
-" 't_dist:max_t:units':'ps' " in the dictionary. The good thing about this way is that parameters can be added to the
-input in any order as long as they are formatted correctly. 
-'''
+"""Create a beam object from importing a yaml file.
+
+Arguments:
+file -- yaml file from which the beam is being generated
+parameters_dict -- dictionary of parameters that are being applied to the yaml file (default=None) 
+"""
 from distgen import Generator
 
 def create_beam(file, parameters_dict=None):
