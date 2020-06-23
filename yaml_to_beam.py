@@ -1,12 +1,12 @@
-"""Create a beam object from importing a yaml file.
-
-Arguments:
-file -- yaml file from which the beam is being generated
-parameters_dict -- dictionary of parameters that are being applied to the yaml file (default=None) 
-"""
 from distgen import Generator
 
 def create_beam(file, parameters_dict=None):
+    """Create a beam object from importing a yaml file.
+
+    Arguments:
+    file -- yaml file from which the beam is being generated
+    parameters_dict -- dictionary of parameters that are being applied to the yaml file (default=None) 
+    """
     gen = Generator(file, verbose=0)
 
     if parameters_dict:
