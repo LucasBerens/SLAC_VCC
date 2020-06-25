@@ -1,2 +1,8 @@
-name: virtual-cathode-camera-machine-learning
+name: SLAC_VCC
+channels:
+  - anaconda
+  - conda-forge
+  - defaults
 dependencies:
+  - python=3.7
+  - distgen=0.4.0=py_0
