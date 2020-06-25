@@ -1,4 +1,6 @@
 from distgen import Generator
+import numpy as np
+import matplotlib.pyplot as plt
 
 def create_beam(file, parameters_dict=None):
     """Create a beam object from importing a yaml file.
@@ -73,6 +75,38 @@ def create_beam(file, parameters_dict=None):
 
     gen.verbose=False
     gen.run()
-    gen.particles
-    print (gen.particles)
+    return (gen)
     print ('\n' + str(gen))
+    
+def gen_histogram(gen, bins):
+    """Returns a 2d histogram from a generated beam.
+    
+    Arguments:
+    gen -- beam generated from create_beam()
+    bins -- int or array_like or [int, int] or [array, array]
+         -- if only int is given, int=bin_x=bin_y
+    """
+    x = gen.particles.x
+    y = gen.particles.y
+    return np.histogram2d(x,y,bins)
+
+def show_histogram(gen, bins, figsize=None, dpi=None, title=None, x_label=None, y_label=None):
+    """Displays an image of a single 2d histogram.
+    
+    Arguments:
+    gen -- beam generated from create_beam()
+    bins -- Int or array_like or [int, int] or [array, array]. If only int is given, int=bin_x=bin_y
+    figsize -- int/float array, figure size in inches, if histogram is a square, ratio is locked to square and 
+               largest of the two values is used
+    dpi -- int/float, figure resolution in pixels per inch
+    title -- string
+    x/y_label -- string, axes labels
+    """
+    H, xedges, yedges = gen_histogram(gen, bins) # H -- 2d array of data values, x/yedges -- bin edge locations
+    fig = plt.figure(figsize=figsize, dpi=dpi) # size of plot = fig.get_size_inches()*fig.dpi
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    fig.autofmt_xdate() # rotate x-axis labels so that they don't overlap
+    plt.imshow(H, interpolation='nearest', origin='low',
+        extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]])
