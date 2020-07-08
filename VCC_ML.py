@@ -1,6 +1,7 @@
 from distgen import Generator
 import numpy as np
 import matplotlib.pyplot as plt
+from pmd_beamphysics import plot
 
 def create_beam(file, parameters_dict=None):
     """Create a beam object from importing a yaml file.
@@ -75,16 +76,14 @@ def create_beam(file, parameters_dict=None):
 
     gen.verbose=False
     gen.run()
-    return (gen)
-    print ('\n' + str(gen))
+    return gen
     
-def gen_histogram(gen, bins):
+def gen_xyhistogram(gen, bins):
     """Returns a 2d histogram from a generated beam.
     
     Arguments:
     gen -- beam generated from create_beam()
-    bins -- int or array_like or [int, int] or [array, array]
-         -- if only int is given, int=bin_x=bin_y
+    bins -- int or array_like or [int, int] or [array, array]. If only int is given, int=bin_x=bin_y
     """
     x = gen.particles.x
     y = gen.particles.y
@@ -102,7 +101,7 @@ def show_histogram(gen, bins, figsize=None, dpi=None, title=None, x_label=None, 
     title -- string
     x/y_label -- string, axes labels
     """
-    H, xedges, yedges = gen_histogram(gen, bins) # H -- 2d array of data values, x/yedges -- bin edge locations
+    H, xedges, yedges = gen_xyhistogram(gen, bins) # H -- 2d array of data values, x/yedges -- bin edge locations
     fig = plt.figure(figsize=figsize, dpi=dpi) # size of plot = fig.get_size_inches()*fig.dpi
     plt.xlabel(x_label)
     plt.ylabel(y_label)
@@ -110,3 +109,15 @@ def show_histogram(gen, bins, figsize=None, dpi=None, title=None, x_label=None, 
     fig.autofmt_xdate() # rotate x-axis labels so that they don't overlap
     plt.imshow(H, interpolation='nearest', origin='low',
         extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]])
+    
+def use_marginal_plot(gen, key1='y', key2='energy', bins=None):
+    """Uses capabilities from marginal_plot in pmd_beamphysics to plot a histogram with axes other than x,y
+    
+    Arguments:
+    gen -- beam generated from create_beam()
+    key1 & key2 -- parameters of the beam that are being plotted against each other
+                   parameters include: 'x', 'y', 'p' (momentum), 'energy', 't' (transverse time)
+    bins -- int or array_like or [int, int] or [array, array]. If only int is given, int=bin_x=bin_y
+    """
+    particle_group = gen.particles
+    plot.marginal_plot(particle_group, key1, key2, bins)
