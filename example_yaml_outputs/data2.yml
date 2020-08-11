@@ -1,0 +1,26 @@
+n_particle: 123456
+output:
+  file: rad.gaussian.out.txt
+  type: gpt
+r_dist:
+  sigma_xy:
+    units: mm
+    value: 3.14
+  type: radial_gaussian
+random_type: hammersley
+start:
+  MTE:
+    units: eV
+    value: 0.511
+  type: cathode
+t_dist:
+  max_t:
+    units: ps
+    value: 2
+  min_t:
+    units: ys
+    value: 2718
+  type: uniform
+total_charge:
+  units: pC
+  value: 10

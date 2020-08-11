@@ -2,6 +2,12 @@ from distgen import Generator
 import numpy as np
 import matplotlib.pyplot as plt
 from pmd_beamphysics import plot
+import yaml
+import pprint
+from lcls_tools import image_processing as imp
+import lcls_tools
+import scipy
+from scipy import ndimage, misc
 
 def create_beam(file, parameters_dict=None):
     """Create a beam object from importing a yaml file.
@@ -121,3 +127,144 @@ def use_marginal_plot(gen, key1='y', key2='energy', bins=None):
     """
     particle_group = gen.particles
     plot.marginal_plot(particle_group, key1, key2, bins)
+    
+def change_yaml(input_file, output_file, parameters_dict=None, verbose=False):
+    """Takes an input yaml file, applies parameters changes, and outputs another yaml file to a specifies location. Returns modified dict
+    
+    Arguments:
+    input_file -- input yaml file with beam parameters
+    parameters_dict -- dictionary of parameters that are being applied to the yaml file (default=None)
+    verbose -- if set to True, will print input and output files formatted with pretty print (pprint)
+    """
+    with open(input_file) as file:
+        doc = yaml.load(file, Loader=yaml.FullLoader)
+        
+        if verbose:
+            print ('INPUT FILE PARAMETERS')
+            pprint.pprint (doc)
+        
+    if parameters_dict:
+
+        for i,param in enumerate(parameters_dict):
+            value = parameters_dict[param]
+
+            if 'n_particle' in param:
+                doc['n_particle'] = value
+                    
+            elif 'file' in param:
+                doc['output']['file'] = value
+
+            elif all(x in param for x in ('output','type')):
+                doc['output']['type'] = value
+
+            elif all(x in param for x in ('sigma_xy','units')):
+                doc['r_dist']['sigma_xy']['units'] = value
+
+            elif all(x in param for x in ('sigma_xy','value')):
+                doc['r_dist']['sigma_xy']['value'] = value
+
+            elif all(x in param for x in ('r_dist','type')):
+                doc['r_dist']['type'] = value
+
+            elif ('random_type') in param:
+                doc['random_type'] = value
+
+            elif all(x in param for x in ('MTE','units')):
+                doc['start']['MTE']['units'] = value
+
+            elif all(x in param for x in ('MTE','value')):
+                doc['start']['MTE']['value'] = value
+
+            elif all(x in param for x in ('start','type')):
+                doc['start']['type'] = value
+
+            elif all(x in param for x in ('max_t','units')):
+                doc['t_dist']['max_t']['units'] = value
+
+            elif all(x in param for x in ('max_t','value')):
+                doc['t_dist']['max_t']['value'] = value
+
+            elif all(x in param for x in ('min_t','units')):
+                doc['t_dist']['min_t']['units'] = value
+
+            elif all(x in param for x in ('min_t','value')):
+                doc['t_dist']['min_t']['value'] = value
+
+            elif all(x in param for x in ('t_dist','type')):
+                doc['t_dist']['type'] = value
+
+            elif all(x in param for x in ('total_charge','units')):
+                doc['total_charge']['units'] = value
+
+            elif all(x in param for x in ('total_charge','value')):
+                doc['total_charge']['value'] = value
+
+            else:
+                print('ERROR: One or more parameter names was invalid, please check spelling')
+                return
+            
+        if verbose:
+            print ('\nOUTPUT FILE PARAMETERS')
+            pprint.pprint  (doc)
+            
+        with open(output_file, 'w') as outfile:
+            yaml.dump(doc, outfile, default_flow_style=False)
+            
+        return (doc)
+
+def reduce_2dArray(array, buffer): 
+    r_index, c_index = scipy.ndimage.center_of_mass(array)
+    splice1 = int(r_index - buffer)
+    removed_top_rows = np.delete(array, np.s_[:splice1], axis=0)
+    
+    r_index, c_index = scipy.ndimage.center_of_mass(removed_top_rows)
+    splice2 = int(r_index + buffer*(len(array)-splice1)/len(array))
+    removed_bottom_rows = np.delete(removed_top_rows, np.s_[splice2:], axis=0)
+    
+    r_index, c_index = scipy.ndimage.center_of_mass(removed_bottom_rows)
+    splice3 = int(c_index - buffer)
+    removed_left_cols = np.delete(removed_bottom_rows, np.s_[:splice3], axis=1)
+    
+    r_index, c_index = scipy.ndimage.center_of_mass(removed_left_cols)
+    splice4 = int(c_index + buffer*(len(removed_bottom_rows[0])-splice3)/len(removed_bottom_rows[0]) + buffer/5)
+    removed_right_cols = np.delete(removed_left_cols, np.s_[splice4:], axis=1)
+    
+    return (removed_right_cols)
+
+def SquareShape(file, shape):
+    original = file
+    xsize, ysize = np.shape(original)
+
+    if ysize > xsize:
+        square = np.delete(original, np.s_[:(ysize-xsize)], axis=1)
+    elif ysize < xsize:
+        square = np.delete(original, np.s_[:(xsize-ysize)], axis=0)
+    else:
+        print ('Array is already square')
+
+    X,Y = np.shape(square) # check to make sure they're square
+    
+    if X == Y:
+        scale = shape/X # scale factor to make array ShapexShape
+    else:
+        print ('Something terrible has happened, the dimensions still are not square')
+        return ()
+    
+    result = ndimage.zoom(square, scale)
+    return(result)
+
+def get_dimensions(fname, verbose=False):
+    image = imp.mat_image.MatImage()
+    image.load_mat_image(fname)
+    resolution = image.resolution
+    cols = image.columns
+    rows = image.rows
+    xdim = cols*resolution
+    ydim = rows*resolution
+    
+    if verbose:
+        print (str(resolution) + " microns/pixel")
+        print ('rows x cols: ' + str(cols) + ' x ' + str(rows))
+        print ('Real life dimensions: ' + str(xdim) + ' x ' + str(ydim)  + ' microns')
+    
+    return(xdim,ydim)
