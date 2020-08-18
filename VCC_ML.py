@@ -212,7 +212,14 @@ def change_yaml(input_file, output_file, parameters_dict=None, verbose=False):
             
         return (doc)
 
-def reduce_2dArray(array, buffer): 
+def reduce_2dArray(file, buffer, shape, verbose=False):
+    # Loading image file
+    image = imp.mat_image.MatImage()
+    image.load_mat_image(file) # image object loaded with file
+    
+    # Get initial dimensions
+    array = image.image
+    
     r_index, c_index = scipy.ndimage.center_of_mass(array)
     splice1 = int(r_index - buffer)
     removed_top_rows = np.delete(array, np.s_[:splice1], axis=0)
@@ -227,9 +234,44 @@ def reduce_2dArray(array, buffer):
     
     r_index, c_index = scipy.ndimage.center_of_mass(removed_left_cols)
     splice4 = int(c_index + buffer*(len(removed_bottom_rows[0])-splice3)/len(removed_bottom_rows[0]) + buffer/5)
-    removed_right_cols = np.delete(removed_left_cols, np.s_[splice4:], axis=1)
+    reduced = np.delete(removed_left_cols, np.s_[splice4:], axis=1)
     
-    return (removed_right_cols)
+    # Square shaping below this line, not using SquareShape function so we can pass the dimension variables more easily
+    old_xsize, old_ysize = np.shape(array) # Get dimensions of original mat image
+    xsize, ysize = np.shape(reduced) # Get dimensions of reduced mat image
+
+    if ysize > xsize:
+        square = np.delete(reduced, np.s_[:(ysize-xsize)], axis=1) # Delete rows until equal with columns
+    elif ysize < xsize:
+        square = np.delete(reduced, np.s_[:(xsize-ysize)], axis=0) # Delete columns until equal with rows
+    else:
+        print ('Array is already square')
+
+    X,Y = np.shape(square) # check to make sure they're square
+    
+    if X == Y:
+        scale = shape/X # scale factor to make array ShapexShape
+    else:
+        print ('Something terrible has happened, the dimensions still are not square')
+        return ()
+    
+    # Getting dimensions of final image
+    xdim,ydim,resolution = get_dimensions(image, verbose=True)
+    #x_reduction_factor = X/old_xsize
+    #y_reduction_factor = X/old_ysize
+    #new_xdim = xdim*x_reduction_factor
+    #new_ydim = ydim*y_reduction_factor
+    new_xdim = X*resolution
+    new_ydim = Y*resolution
+    dimensions = [new_xdim,new_ydim]
+    
+    if verbose:
+        print ('Dimensions of reduced image: ' + str(new_xdim) + ' x ' + str(new_ydim)  + ' microns')
+        print ('                           : ' + str(new_xdim*0.001) + ' x ' + str(new_ydim*0.001)  + ' mm\n')
+
+    # Square image and return it along with others made during the process
+    squared = ndimage.zoom(square, scale)
+    return(array, reduced, squared, dimensions)
 
 def SquareShape(file, shape):
     original = file
@@ -253,18 +295,18 @@ def SquareShape(file, shape):
     result = ndimage.zoom(square, scale)
     return(result)
 
-def get_dimensions(fname, verbose=False):
-    image = imp.mat_image.MatImage()
-    image.load_mat_image(fname)
-    resolution = image.resolution
-    cols = image.columns
-    rows = image.rows
+def get_dimensions(image_object, verbose=False):
+    resolution = image_object.resolution
+    cols = image_object.columns
+    rows = image_object.rows
     xdim = cols*resolution
     ydim = rows*resolution
     
     if verbose:
+        print (cols, rows, resolution)
         print (str(resolution) + " microns/pixel")
         print ('rows x cols: ' + str(cols) + ' x ' + str(rows))
         print ('Real life dimensions: ' + str(xdim) + ' x ' + str(ydim)  + ' microns')
+        print ('                    : ' + str(xdim*0.001) + ' x ' + str(ydim*0.001)  + ' mm\n')
     
-    return(xdim,ydim)
+    return(xdim,ydim,resolution)
